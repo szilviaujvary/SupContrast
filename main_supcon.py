@@ -155,7 +155,7 @@ def create_val_img_folder(args):
 
 def get_class_name(args):
     class_to_name = dict()
-    fp = open(os.path.join(args.data_dir, args.dataset, 'words.txt'), 'r')
+    fp = open(os.path.join('tiny-imagenet-200', 'words.txt'), 'r')
     data = fp.readlines()
     for line in data:
         words = line.strip('\n').split('\t')
