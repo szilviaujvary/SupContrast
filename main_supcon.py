@@ -76,7 +76,7 @@ def parse_option():
     parser.add_argument('--trial', type=str, default='0',
                         help='id for recording multiple runs')
     parser.add_argument('--pretrained', type=bool, default=False)
-    parser.add_argument('--tf', type=bool, default=False)
+    parser.add_argument('--ts', type=bool, default=False)
 
     opt = parser.parse_args()
 
