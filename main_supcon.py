@@ -254,7 +254,7 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
         print(images.shape)
 
         #images = torch.cat([images[0], images[1]], dim=0)
-        images = torch.cat([images[0], images[1]], dim=0)
+        images = torch.cat([images[0], images[1]], dim=1)
         print(images.shape)
         if torch.cuda.is_available():
             images = images.cuda(non_blocking=True)
@@ -265,9 +265,9 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
         warmup_learning_rate(opt, epoch, idx, len(train_loader), optimizer)
 
         # compute loss
-        features = model(images)
+        features = model(images[None, :])
         #f1, f2 = torch.split(features, [bsz, bsz], dim=0)
-        f1, f2 = torch.split(features, [bsz, bsz], dim=0)
+        f1, f2 = torch.split(features, [bsz, bsz], dim=1)
         features = torch.cat([f1.unsqueeze(1), f2.unsqueeze(1)], dim=1)
         if opt.method == 'SupCon':
             loss = criterion(features, labels)
