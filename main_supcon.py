@@ -267,7 +267,7 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
         # compute loss
         features = model(images[None, :])
         #f1, f2 = torch.split(features, [bsz, bsz], dim=0)
-        f1, f2 = torch.split(features, [bsz, bsz], dim=1)
+        f1, f2 = torch.split(features, [64, 64], dim=1)
         features = torch.cat([f1.unsqueeze(1), f2.unsqueeze(1)], dim=1)
         if opt.method == 'SupCon':
             loss = criterion(features, labels)
