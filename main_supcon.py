@@ -5,7 +5,6 @@ import sys
 import argparse
 import time
 import math
-import wget
 
 import tensorboard_logger as tb_logger
 import torch
