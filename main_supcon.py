@@ -5,6 +5,7 @@ import sys
 import argparse
 import time
 import math
+import wget
 
 import tensorboard_logger as tb_logger
 import torch
@@ -166,8 +167,9 @@ def get_class_name(args):
 
 def set_loader(opt):
     # construct data loader
-    !wget http://cs231n.stanford.edu/tiny-imagenet-200.zip
-    !unzip -qq 'tiny-imagenet-200.zip'
+    #site_url = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
+    #tiny_data = wget.download(site_url)
+    #!unzip -qq 'tiny-imagenet-200.zip'
 
 
     train_dir = os.path.join('tiny-imagenet-200', 'train')
