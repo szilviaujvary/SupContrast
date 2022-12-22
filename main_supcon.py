@@ -33,6 +33,8 @@ def parse_option():
                         help='save frequency')
     parser.add_argument('--batch_size', type=int, default=256,
                         help='batch_size')
+    parser.add_argument('--test_batch_size', type=int, default=256,
+                        help='batch_size')
     parser.add_argument('--num_workers', type=int, default=16,
                         help='num of workers to use')
     parser.add_argument('--epochs', type=int, default=1000,
@@ -128,7 +130,7 @@ def parse_option():
 
     return opt
 
-def create_val_img_folder(args):
+def create_val_img_folder(opt):
     '''
     This method is responsible for separating validation images into separate sub folders
     '''
@@ -153,7 +155,7 @@ def create_val_img_folder(args):
         if os.path.exists(os.path.join(img_dir, img)):
             os.rename(os.path.join(img_dir, img), os.path.join(newpath, img))
 
-def get_class_name(args):
+def get_class_name(opt):
     class_to_name = dict()
     fp = open(os.path.join('tiny-imagenet-200', 'words.txt'), 'r')
     data = fp.readlines()
@@ -208,10 +210,10 @@ def set_loader(opt):
                                     transform=transforms.Compose(val_trans))
     
     print('Preparing data loaders ...')
-    train_data_loader = torch.utils.data.DataLoader(train_data, batch_size=args['batch_size'], 
+    train_data_loader = torch.utils.data.DataLoader(train_data, batch_size=opt.batch_size, 
                                                     shuffle=True, **kwargs)
     
-    val_data_loader = torch.utils.data.DataLoader(val_data, batch_size=args['test_batch_size'], 
+    val_data_loader = torch.utils.data.DataLoader(val_data, batch_size=opt.test_batch_size, 
                                                     shuffle=True, **kwargs)
     
     return train_data_loader, val_data_loader, train_data, val_data
