@@ -52,8 +52,7 @@ def parse_option():
 
     # model dataset
     parser.add_argument('--model', type=str, default='resnet50')
-    parser.add_argument('--dataset', type=str, default='cifar10',
-                        choices=['cifar10', 'cifar100', 'path'], help='dataset')
+    parser.add_argument('--dataset', type=str, default='tiny', help='dataset')
     parser.add_argument('--mean', type=str, help='mean of dataset in path in form of str tuple')
     parser.add_argument('--std', type=str, help='std of dataset in path in form of str tuple')
     parser.add_argument('--data_folder', type=str, default=None, help='path to custom dataset')
@@ -76,6 +75,8 @@ def parse_option():
                         help='warm-up for large batch training')
     parser.add_argument('--trial', type=str, default='0',
                         help='id for recording multiple runs')
+    parser.add_argument('--pretrained', type=bool, default=False)
+    parser.add_argument('--tf', type=bool, default=False)
 
     opt = parser.parse_args()
 
@@ -127,53 +128,84 @@ def parse_option():
 
     return opt
 
+def create_val_img_folder(args):
+    '''
+    This method is responsible for separating validation images into separate sub folders
+    '''
+    #dataset_dir = os.path.join(args.data_dir, args.dataset)
+    val_dir = os.path.join('tiny-imagenet-200', 'val')
+    img_dir = os.path.join(val_dir, 'images')
+
+    fp = open(os.path.join(val_dir, 'val_annotations.txt'), 'r')
+    data = fp.readlines()
+    val_img_dict = {}
+    for line in data:
+        words = line.split('\t')
+        val_img_dict[words[0]] = words[1]
+    fp.close()
+
+    # Create folder if not present and move images into proper folders
+    for img, folder in val_img_dict.items():
+        newpath = (os.path.join(img_dir, folder))
+
+        if not os.path.exists(newpath):
+            os.mkdir(newpath)
+        if os.path.exists(os.path.join(img_dir, img)):
+            os.rename(os.path.join(img_dir, img), os.path.join(newpath, img))
+
 
 def set_loader(opt):
     # construct data loader
-    if opt.dataset == 'cifar10':
-        mean = (0.4914, 0.4822, 0.4465)
-        std = (0.2023, 0.1994, 0.2010)
-    elif opt.dataset == 'cifar100':
-        mean = (0.5071, 0.4867, 0.4408)
-        std = (0.2675, 0.2565, 0.2761)
-    elif opt.dataset == 'path':
-        mean = eval(opt.mean)
-        std = eval(opt.std)
+    !wget http://cs231n.stanford.edu/tiny-imagenet-200.zip
+    !unzip -qq 'tiny-imagenet-200.zip'
+
+
+    train_dir = os.path.join('tiny-imagenet-200', 'train')
+    val_dir = os.path.join('tiny-imagenet-200', 'val', 'images')
+    kwargs = {'num_workers': 1, 'pin_memory': True}
+
+    # Pre-calculated mean & std on imagenet:
+    # norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    # For other datasets, we could just simply use 0.5:
+    # norm = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    
+    print('Preparing dataset ...')
+    # Normalization
+    norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) \
+        if opt.pretrained else transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+
+    # Normal transformation
+    if opt.pretrained:
+        train_trans = [transforms.RandomHorizontalFlip(), transforms.RandomResizedCrop(224), 
+                        transforms.ToTensor()]
+        val_trans = [transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor(), norm]
     else:
-        raise ValueError('dataset not supported: {}'.format(opt.dataset))
-    normalize = transforms.Normalize(mean=mean, std=std)
+        train_trans = [transforms.RandomHorizontalFlip(), transforms.ToTensor()]
+        val_trans = [transforms.ToTensor(), norm]
 
-    train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(size=opt.size, scale=(0.2, 1.)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomApply([
-            transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
-        ], p=0.8),
-        transforms.RandomGrayscale(p=0.2),
-        transforms.ToTensor(),
-        normalize,
-    ])
+    # Data augmentation (torchsample)
+    # torchsample doesn't really help tho...
+    if opt.ts:
+        train_trans += [tstf.Gamma(0.7),
+                        tstf.Brightness(0.2),
+                        tstf.Saturation(0.2)]
 
-    if opt.dataset == 'cifar10':
-        train_dataset = datasets.CIFAR10(root=opt.data_folder,
-                                         transform=TwoCropTransform(train_transform),
-                                         download=True)
-    elif opt.dataset == 'cifar100':
-        train_dataset = datasets.CIFAR100(root=opt.data_folder,
-                                          transform=TwoCropTransform(train_transform),
-                                          download=True)
-    elif opt.dataset == 'path':
-        train_dataset = datasets.ImageFolder(root=opt.data_folder,
-                                            transform=TwoCropTransform(train_transform))
-    else:
-        raise ValueError(opt.dataset)
+    train_data = datasets.ImageFolder(train_dir, 
+                                    transform=transforms.Compose(train_trans + [norm]))
+    
+    val_data = datasets.ImageFolder(val_dir, 
+                                    transform=transforms.Compose(val_trans))
+    
+    print('Preparing data loaders ...')
+    train_data_loader = torch.utils.data.DataLoader(train_data, batch_size=args['batch_size'], 
+                                                    shuffle=True, **kwargs)
+    
+    val_data_loader = torch.utils.data.DataLoader(val_data, batch_size=args['test_batch_size'], 
+                                                    shuffle=True, **kwargs)
+    
+    return train_data_loader, val_data_loader, train_data, val_data
 
-    train_sampler = None
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=opt.batch_size, shuffle=(train_sampler is None),
-        num_workers=opt.num_workers, pin_memory=True, sampler=train_sampler)
 
-    return train_loader
 
 
 def set_model(opt):
@@ -254,9 +286,10 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
 
 def main():
     opt = parse_option()
+    create_val_img_folder(opt)
 
     # build data loader
-    train_loader = set_loader(opt)
+    train_data_loader, val_data_loader, train_data, val_data = set_loader(opt)
 
     # build model and criterion
     model, criterion = set_model(opt)
@@ -273,7 +306,7 @@ def main():
 
         # train for one epoch
         time1 = time.time()
-        loss = train(train_loader, model, criterion, optimizer, epoch, opt)
+        loss = train(train_data_loader, model, criterion, optimizer, epoch, opt)
         time2 = time.time()
         print('epoch {}, total time {:.2f}'.format(epoch, time2 - time1))
 
