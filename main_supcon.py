@@ -215,10 +215,7 @@ def set_loader(opt):
     
     val_data_loader = torch.utils.data.DataLoader(val_data, batch_size=opt.test_batch_size, 
                                                     shuffle=True, **kwargs)
-    for image, label in train_data_loader:
-        torch.permute(image, (0, 2, 3, 1))
-    for image, label in val_data_loader:
-        torch.permute(image, (0, 2, 3, 1))
+ 
     
     return train_data_loader, val_data_loader, train_data, val_data
 
