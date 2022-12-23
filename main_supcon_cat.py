@@ -198,31 +198,20 @@ def set_loader(opt):
 
     # Data augmentation (torchsample)
     # torchsample doesn't really help tho...
-    normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    if opt.ts:
+        train_trans += [tstf.Gamma(0.7),
+                        tstf.Brightness(0.2),
+                        tstf.Saturation(0.2)]
 
-    train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(size=opt.size, scale=(0.2, 1.)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomApply([
-            transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
-        ], p=0.8),
-        transforms.RandomGrayscale(p=0.2),
-        transforms.ToTensor(),
-        normalize,
-    ])
     train_data = datasets.ImageFolder(train_dir, 
-                                    transform=TwoCropTransform(train_transform))
+                                    transform=transforms.Compose(train_trans + [norm]))
     
     val_data = datasets.ImageFolder(val_dir, 
                                     transform=transforms.Compose(val_trans))
     
     print('Preparing data loaders ...')
-    train_sampler = None
-    train_data_loader = torch.utils.data.DataLoader(
-        train_data, batch_size=opt.batch_size, shuffle=(train_sampler is None),
-        num_workers=opt.num_workers, pin_memory=True, sampler=train_sampler)
-   # train_data_loader = torch.utils.data.DataLoader(train_data, batch_size=opt.batch_size, 
-   #                                                 shuffle=True, **kwargs)
+    train_data_loader = torch.utils.data.DataLoader(train_data, batch_size=opt.batch_size, 
+                                                    shuffle=True, **kwargs)
     
     val_data_loader = torch.utils.data.DataLoader(val_data, batch_size=opt.test_batch_size, 
                                                     shuffle=True, **kwargs)
