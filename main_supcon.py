@@ -262,7 +262,7 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
     end = time.time()
     for idx, (images, labels) in enumerate(train_loader):
         data_time.update(time.time() - end)
-        print(images.shape)
+        #print(images.shape)
 
         #images = torch.cat([images[0], images[1]], dim=0)
         images = torch.cat([images[0], images[1]], dim=0)
