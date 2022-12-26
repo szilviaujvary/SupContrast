@@ -14,8 +14,8 @@ from torchvision import transforms, datasets
 from util import TwoCropTransform, AverageMeter
 from util import adjust_learning_rate, warmup_learning_rate
 #from util import set_optimizer, save_model
-from networks.resnet_big import SupConResNet
-from losses import SupConLoss
+#from networks.resnet_big import SupConResNet
+#from losses import SupConLoss
 
 try:
     import apex
